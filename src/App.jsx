@@ -1,8 +1,23 @@
 import { useState, useEffect } from 'react'
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import './App.css'
+import html2pdf from 'html2pdf.js'
 
 function App() {
+  const descargarPDF = () => {
+    const elemento = document.getElementById('resultado-pdf');
+
+    const opciones = {
+      margin: 0.5,
+      filename: 'eco-audit.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 3 },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opciones).from(elemento).save();
+  };
+
   const [paso, setPaso] = useState(0);
   const [respuestas, setRespuestas] = useState(() => {
     const guardado = localStorage.getItem('audit-30-respuestas');
@@ -435,58 +450,82 @@ function App() {
         </main>
       ) : (
         <main className="card" style={{ textAlign: 'center' }}>
-          <div className="resultado-box">
-            <h2>Puntuación Global</h2>
-            <div className="puntos-large">{totalPuntos}</div>
-            <div style={{ padding: '8px 20px', background: totalPuntos > 80 ? '#27ae60' : totalPuntos > 40 ? '#f39c12' : '#e74c3c', borderRadius: '25px', fontWeight: 'bold' }}>
-              {totalPuntos > 80 ? 'Óptimo' : totalPuntos > 40 ? 'Mejorable' : 'Crítico'}
-            </div>
-          </div>
 
-          <div style={{ width: '100%', height: 300, marginTop: '20px' }}>
-            <h3>Análisis de Madurez por Pilar</h3>
-            <ResponsiveContainer>
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={calcularDatosGrafico()}>
-                <PolarGrid stroke="#ccc" />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 'bold' }} />
+  {/* BOTÓN PDF */}
+  <button className="btn-nav" onClick={descargarPDF} style={{ marginBottom: '20px' }}>
+    Descargar informe PDF 📄
+  </button>
 
-                {/* AÑADE ESTA LÍNEA PARA FIJAR EL MÁXIMO EN 24 */}
-                <PolarRadiusAxis angle={30} domain={[0, 24]} tick={false} axisLine={false} />
+  {/* TODO EL CONTENIDO EXPORTABLE */}
+  <div id="resultado-pdf">
 
-                <Radar
-                  name="Pyme"
-                  dataKey="A"
-                  stroke="#27ae60"
-                  fill="#27ae60"
-                  fillOpacity={0.6}
-                  dot={{ r: 4, fill: "#27ae60" }} // Esto añade los puntitos en los vértices
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
+    <div className="resultado-box">
+      <h2>Puntuación Global</h2>
+      <div className="puntos-large">{totalPuntos}</div>
 
-          {/* LISTADO DINÁMICO DE ÁREAS CRÍTICAS */}
-          <div style={{ marginTop: '40px', textAlign: 'left' }}>
-            {getDiagnosticosCriticos().map((diag, idx) => (
-              <div key={idx} style={{ background: '#fff5f5', padding: '25px', borderRadius: '15px', borderLeft: '8px solid #e74c3c', marginBottom: '20px' }}>
-                <h3 style={{ color: '#c0392b', marginTop: 0 }}>⚠️ Área Crítica: {diag.cat}</h3>
-                <p>Has obtenido solo <strong>{diag.puntos} / 24</strong> puntos en esta área.</p>
-                <div style={{ marginTop: '15px' }}>
-                  <strong style={{ color: '#2d3748' }}>Acciones Recomendadas:</strong>
-                  <ul style={{ paddingLeft: '20px', marginTop: '10px', color: '#4a5568' }}>
-                    {diag.mejoras.map((m, i) => (
-                      <li key={i} style={{ marginBottom: '10px' }}>
-                        Para <em>"{m.problema}"</em> deberías implementar: <strong>{m.solucion}</strong>.
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+      <div style={{
+        padding: '8px 20px',
+        background: totalPuntos > 80 ? '#27ae60' : totalPuntos > 40 ? '#f39c12' : '#e74c3c',
+        borderRadius: '25px',
+        fontWeight: 'bold'
+      }}>
+        {totalPuntos > 80 ? 'Óptimo' : totalPuntos > 40 ? 'Mejorable' : 'Crítico'}
+      </div>
+    </div>
+
+    <div style={{ width: '100%', height: 300, marginTop: '20px' }}>
+      <h3>Análisis de Madurez por Pilar</h3>
+      <ResponsiveContainer>
+        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={calcularDatosGrafico()}>
+          <PolarGrid stroke="#ccc" />
+          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 'bold' }} />
+          <PolarRadiusAxis angle={30} domain={[0, 24]} tick={false} axisLine={false} />
+
+          <Radar
+            name="Pyme"
+            dataKey="A"
+            stroke="#27ae60"
+            fill="#27ae60"
+            fillOpacity={0.6}
+            dot={{ r: 4, fill: "#27ae60" }}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+
+    {/* ÁREAS CRÍTICAS */}
+    <div style={{ marginTop: '40px', textAlign: 'left' }}>
+      {getDiagnosticosCriticos().map((diag, idx) => (
+        <div key={idx} style={{
+          background: '#fff5f5',
+          padding: '25px',
+          borderRadius: '15px',
+          borderLeft: '8px solid #e74c3c',
+          marginBottom: '20px'
+        }}>
+          <h3 style={{ color: '#c0392b' }}>⚠️ Área Crítica: {diag.cat}</h3>
+          <p>Has obtenido solo <strong>{diag.puntos} / 24</strong> puntos.</p>
+
+          <ul>
+            {diag.mejoras.map((m, i) => (
+              <li key={i}>
+                <em>{m.problema}</em> → <strong>{m.solucion}</strong>
+              </li>
             ))}
-          </div>
+          </ul>
+        </div>
+      ))}
+    </div>
 
-          <button className="btn-nav" style={{ marginTop: '30px', width: '100%' }} onClick={() => { localStorage.clear(); window.location.reload(); }}>Reiniciar Auditoría</button>
-        </main>
+  </div>
+
+  {/* REINICIO */}
+  <button className="btn-nav" style={{ marginTop: '30px', width: '100%' }}
+    onClick={() => { localStorage.clear(); window.location.reload(); }}>
+    Reiniciar Auditoría
+  </button>
+
+</main>
       )}
     </div>
   )
